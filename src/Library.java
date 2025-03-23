@@ -61,26 +61,8 @@ public class Library {
         editions.sort(Comparator.comparing(PrintedEdition::getGenre)); // Сортируем список изданий по жанру
     }
 
-    // Метод для получения данных о книгах в виде двумерного массива
-    public Object[][] getEditionsData() {
-        // Создаем двумерный массив с размерами: количество изданий по строкам и 5 столбцов для данных
-        Object[][] data = new Object[editions.size()][5];
-
-        // Проходим по всем изданиям в списке
-        for (int i = 0; i < editions.size(); i++) {
-            // Получаем очередное издание из списка
-            PrintedEdition edition = editions.get(i);
-
-            // Заполняем соответствующие ячейки массива данными из издания
-            data[i][0] = edition.getTitle();  // Название издания
-            data[i][1] = edition.getAuthor(); // Автор издания
-            data[i][2] = edition.getYear();   // Год издания
-            data[i][3] = edition.getPublisher(); // Издательство
-            data[i][4] = edition.getGenre();  // Жанр издания
-        }
-
-        // Возвращаем заполненный массив данных
-        return data;
+    public void sortByType() {
+        editions.sort(Comparator.comparing(PrintedEdition::getType)); // Сортируем список изданий по типу
     }
 }
 

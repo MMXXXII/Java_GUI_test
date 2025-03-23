@@ -1,45 +1,102 @@
 import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
-public class LibraryController { // Класс контроллера, управляющий взаимодействием модели и представления
-    private Library library; // Объект библиотеки (модель), содержащий данные о книгах
-    private LibraryView view; // Объект представления (GUI), отвечающий за интерфейс пользователя
+public class LibraryController {
+    private Library library;
+    private LibraryView view;
 
-    // Конструктор контроллера, принимающий библиотеку и представление
     public LibraryController(Library library, LibraryView view) {
-        this.library = library; // Сохраняем ссылку на модель
-        this.view = view; // Сохраняем ссылку на представление
+        this.library = library;
+        this.view = view;
 
-        // Устанавливаем обработчики событий для кнопок в представлении
-        view.setAddButtonListener(e -> addEdition()); // Добавление книги
-        view.setRemoveButtonListener(e -> removeEdition()); // Удаление книги
-        view.setSearchButtonListener(e -> searchEdition()); // Поиск книги
-        view.setSortButtonListener(e -> sortEditions()); // Сортировка книг
+        view.setAddButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                addEdition();
+            }
+        });
+
+        view.setRemoveButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                removeEdition();
+            }
+        });
+
+        view.setSearchButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                searchEdition();
+            }
+        });
+
+        view.setSortButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                sortEditions();
+            }
+        });
     }
 
-    // Метод для добавления нового издания в библиотеку
     private void addEdition() {
-        // Запрашиваем у пользователя ввод данных через диалоговые окна
-        String title = JOptionPane.showInputDialog("Введите название издания:");
+        String selectedType = view.getSelectedType(); // Получаем выбранный тип
+
+        String title = JOptionPane.showInputDialog("Введите название:");
+        if (title == null || title.trim().isEmpty()) return;
+
         String author = JOptionPane.showInputDialog("Введите автора:");
-        int year = Integer.parseInt(JOptionPane.showInputDialog("Введите год выпуска:"));
+        if (author == null || author.trim().isEmpty()) return;
+
+        int year;
+        try {
+            year = Integer.parseInt(JOptionPane.showInputDialog("Введите год издания:"));
+            if (year > 2024) {
+                JOptionPane.showMessageDialog(null, "Год издания не может быть больше 2024!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Введите корректный год!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         String publisher = JOptionPane.showInputDialog("Введите издательство:");
+        if (publisher == null || publisher.trim().isEmpty()) return;
+
+        // Получаем жанр
         String genre = JOptionPane.showInputDialog("Введите жанр:");
+        if (genre == null || genre.trim().isEmpty()) return;
 
-        // Создаем новый объект Book и добавляем его в библиотеку
-        library.addEdition(new Book(title, author, year, publisher, genre));
+        // Создаем объект нужного типа
+        PrintedEdition edition;
+        switch (selectedType) {
+            case "Книга":
+                edition = new Book(title, author, year, publisher, genre);
+                break;
+            case "Учебник":
+                edition = new Textbook(title, author, year, publisher, genre);
+                break;
+            case "Журнал":
+                edition = new Magazine(title, author, year, publisher, genre);
+                break;
+            default:
+                JOptionPane.showMessageDialog(null, "Неизвестный тип издания!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                return;
+        }
 
-        // Обновляем таблицу в представлении, чтобы отобразить изменения
-        view.updateTable(library);
+        library.addEdition(edition);
+        view.updateTable(library); // Обновляем таблицу
     }
 
-    // Метод для удаления выбранного издания из библиотеки
+
+
     private void removeEdition() {
-        int selectedRow = view.getSelectedRow(); // Получаем индекс выбранной строки в таблице
-        if (selectedRow != -1) { // Проверяем, выбрана ли строка
-            library.removeEdition(selectedRow); // Удаляем книгу из библиотеки
-            view.updateTable(library); // Обновляем таблицу в интерфейсе
-        } else { // Если строка не выбрана
-            JOptionPane.showMessageDialog(null, "Выберите строку для удаления."); // Показываем сообщение об ошибке
+        int selectedRow = view.getSelectedRow();
+        if (selectedRow != -1) {
+            library.removeEdition(selectedRow);
+            view.updateTable(library);
+        } else {
+            JOptionPane.showMessageDialog(null, "Выберите запись для удаления!", "Ошибка", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -48,12 +105,17 @@ public class LibraryController { // Класс контроллера, упра�
         if (keyword != null && !keyword.isEmpty()) { // Проверяем, что пользователь ввел данные
             Library searchResults = new Library(); // Создаем временный объект библиотеки для хранения результатов поиска
             for (PrintedEdition edition : library.getEditions()) { // Проходим по всем книгам в библиотеке
-                // Проверяем, что название издания начинается с введенного ключевого слова
+                // Проверяем, что название издания начинается с введенного ключевого слова (игнорируем регистр)
                 if (edition.getTitle().toUpperCase().startsWith(keyword.toUpperCase())) {
                     searchResults.addEdition(edition); // Добавляем найденные книги в новую библиотеку
                 }
             }
-            view.updateTable(searchResults); // Обновляем таблицу в представлении, показывая результаты поиска
+            // Если найдены результаты поиска
+            if (!searchResults.getEditions().isEmpty()) {
+                view.updateTable(searchResults); // Обновляем таблицу в представлении, показывая результаты поиска
+            } else {
+                JOptionPane.showMessageDialog(null, "Издание не найдено.", "Поиск", JOptionPane.INFORMATION_MESSAGE);
+            }
         }
     }
 
@@ -63,10 +125,9 @@ public class LibraryController { // Класс контроллера, упра�
     // Метод для сортировки изданий по выбранному параметру
     private void sortEditions() {
         // Массив с возможными параметрами сортировки (название, автор, год и т.д.)
-        String[] options = {"Название", "Автор", "Год", "Издательство", "Жанр"};
+        String[] options = {"Название", "Автор", "Год", "Издательство", "Жанр", "Тип"};
 
         // Открытие диалогового окна с выбором параметра сортировки
-        // Используем view.frame вместо переменной frame для ссылки на главное окно из класса LibraryView
         String choice = (String) JOptionPane.showInputDialog(
                 view.frame,  // Ссылка на главное окно из класса LibraryView
                 "Выберите параметр сортировки:", // Текст, который будет отображаться в диалоговом окне
@@ -81,27 +142,28 @@ public class LibraryController { // Класс контроллера, упра�
         if (choice != null) {
             // В зависимости от выбора пользователя, вызываем соответствующий метод сортировки
             switch (choice) {
-                case "Название":  // Если выбрано "Название"
+                case "Название":
                     library.sortByTitle();  // Сортируем по названию
                     break;
-                case "Автор":  // Если выбрано "Автор"
+                case "Автор":
                     library.sortByAuthor();  // Сортируем по автору
                     break;
-                case "Год":  // Если выбрано "Год"
+                case "Год":
                     library.sortByYear();  // Сортируем по году
                     break;
-                case "Издательство":  // Если выбрано "Издательство"
+                case "Издательство":
                     library.sortByPublisher();  // Сортируем по издательству
                     break;
-                case "Жанр":  // Если выбрано "Жанр"
+                case "Жанр":
                     library.sortByGenre();  // Сортируем по жанру
+                    break;
+                case "Тип":
+                    library.sortByType();  // Сортируем по типу (книга, учебник, журнал)
                     break;
             }
             // Обновляем таблицу в представлении, чтобы отобразить отсортированные данные
             view.updateTable(library);  // Метод обновления таблицы с данными из библиотеки
         }
     }
-
-
 
 }
