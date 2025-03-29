@@ -20,7 +20,7 @@ public class LibraryView {
         table = new JTable(tableModel);
         frame.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        JPanel panel = new JPanel();
+        JPanel panel = new JPanel(new FlowLayout());
         addButton = new JButton("Добавить");
         removeButton = new JButton("Удалить");
         searchButton = new JButton("Поиск");
@@ -66,6 +66,8 @@ public class LibraryView {
     }
 
     public void updateTable(Library library) {
-        tableModel.updateData(library.getEditions());
+        tableModel.updateData(library.getEditions()); // Обновляем данные в модели таблицы
+        table.repaint(); // Перерисовываем таблицу
     }
+
 }

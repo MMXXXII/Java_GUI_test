@@ -32,8 +32,8 @@ public class LibraryTableModel extends AbstractTableModel {
             case 1: return edition.getAuthor();
             case 2: return edition.getYear();
             case 3: return edition.getPublisher();
-            case 4: return edition.getGenre(); // Здесь должно быть genre, а не type
-            case 5: return edition.getType();  // Это тип издания (книга, учебник, журнал)
+            case 4: return edition.getGenre();
+            case 5: return edition.getType();  // Это тип издания
             default: return null;
         }
     }

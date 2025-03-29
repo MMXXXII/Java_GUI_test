@@ -31,9 +31,15 @@ public class Library {
         }
     }
 
+
     // Метод для получения всех изданий из библиотеки
     public List<PrintedEdition> getEditions() {
         return editions; // Возвращаем список всех изданий
+    }
+
+    // Метод для установки новых изданий в библиотеку
+    public void setEditions(List<PrintedEdition> editions) {
+        this.editions = editions; // Обновляем список изданий
     }
 
     // Пример метода для сортировки изданий по названию

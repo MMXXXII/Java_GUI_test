@@ -1,169 +1,172 @@
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class LibraryController {
     private Library library;
     private LibraryView view;
+    private LibraryDB libraryDB; // Экземпляр для работы с базой данных
 
+    // Конструктор, инициализирует модель и представление, а также назначает обработчики событий
     public LibraryController(Library library, LibraryView view) {
         this.library = library;
         this.view = view;
+        this.libraryDB = new LibraryDB(); // Инициализация LibraryDB
 
-        view.setAddButtonListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                addEdition();
-            }
-        });
+        library.setEditions(libraryDB.getEditions()); // Загружаем все издания из базы данных
+        view.updateTable(library); // Обновляем таблицу на UI
 
-        view.setRemoveButtonListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                removeEdition();
-            }
-        });
-
-        view.setSearchButtonListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                searchEdition();
-            }
-        });
-
-        view.setSortButtonListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                sortEditions();
-            }
-        });
+        // Назначение обработчиков событий с использованием лямбда-выражений
+        view.setAddButtonListener(e -> addEdition());
+        view.setRemoveButtonListener(e -> removeEdition());
+        view.setSearchButtonListener(e -> searchEdition());
+        view.setSortButtonListener(e -> sortEditions());
     }
 
+    // Метод для добавления нового издания в библиотеку
     private void addEdition() {
         String selectedType = view.getSelectedType(); // Получаем выбранный тип
 
-        String title = JOptionPane.showInputDialog("Введите название:");
+        // Запрос данных у пользователя с проверкой на пустое значение
+        String title = requestInput("Введите название:");
         if (title == null || title.trim().isEmpty()) return;
 
-        String author = JOptionPane.showInputDialog("Введите автора:");
+        String author = requestInput("Введите автора:");
         if (author == null || author.trim().isEmpty()) return;
 
         int year;
-        try {
-            year = Integer.parseInt(JOptionPane.showInputDialog("Введите год издания:"));
-            if (year > 2024) {
-                JOptionPane.showMessageDialog(null, "Год издания не может быть больше 2024!", "Ошибка", JOptionPane.ERROR_MESSAGE);
-                return;
+        while (true) {
+            try {
+                String yearInput = JOptionPane.showInputDialog("Введите год издания:");
+                if (yearInput == null || yearInput.trim().isEmpty()) continue; // Повторный запрос, если введено пустое значение
+                year = Integer.parseInt(yearInput);
+                if (year > 2024) {
+                    JOptionPane.showMessageDialog(null, "Год издания не может быть больше 2024!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                    continue;
+                }
+                break; // Выход из цикла при корректном вводе
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Введите корректный год!", "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(null, "Введите корректный год!", "Ошибка", JOptionPane.ERROR_MESSAGE);
-            return;
         }
 
-        String publisher = JOptionPane.showInputDialog("Введите издательство:");
+        String publisher = requestInput("Введите издательство:");
         if (publisher == null || publisher.trim().isEmpty()) return;
 
-        // Получаем жанр
-        String genre = JOptionPane.showInputDialog("Введите жанр:");
+        String genre = requestInput("Введите жанр:");
         if (genre == null || genre.trim().isEmpty()) return;
 
-        // Создаем объект нужного типа
-        PrintedEdition edition;
-        switch (selectedType) {
-            case "Книга":
-                edition = new Book(title, author, year, publisher, genre);
-                break;
-            case "Учебник":
-                edition = new Textbook(title, author, year, publisher, genre);
-                break;
-            case "Журнал":
-                edition = new Magazine(title, author, year, publisher, genre);
-                break;
-            default:
-                JOptionPane.showMessageDialog(null, "Неизвестный тип издания!", "Ошибка", JOptionPane.ERROR_MESSAGE);
-                return;
+        // Создаем объект нужного типа в зависимости от выбора пользователя
+        PrintedEdition edition = createEdition(selectedType, title, author, year, publisher, genre);
+        if (edition != null) {
+            libraryDB.addEdition(edition); // Добавляем издание в базу данных через LibraryDB
+            library.setEditions(libraryDB.getEditions()); // Обновляем список изданий в библиотеке
+            view.updateTable(library);   // Обновляем таблицу в представлении
         }
-
-        library.addEdition(edition);
-        view.updateTable(library); // Обновляем таблицу
     }
 
+    // Метод для запроса ввода и повторного запроса при пустом значении
+    private String requestInput(String message) {
+        String input;
+        while (true) {
+            input = JOptionPane.showInputDialog(message);
+            if (input == null || input.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Это поле не может быть пустым.", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            } else {
+                return input;
+            }
+        }
+    }
 
+    // Метод для создания объекта нужного типа
+    private PrintedEdition createEdition(String type, String title, String author, int year, String publisher, String genre) {
+        switch (type) {
+            case "Книга":
+                return new Book(title, author, year, publisher, genre);
+            case "Учебник":
+                return new Textbook(title, author, year, publisher, genre);
+            case "Журнал":
+                return new Magazine(title, author, year, publisher, genre);
+            default:
+                JOptionPane.showMessageDialog(null, "Неизвестный тип издания!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                return null;
+        }
+    }
 
     private void removeEdition() {
-        int selectedRow = view.getSelectedRow();
+        int selectedRow = view.getSelectedRow(); // Получаем индекс выбранной строки
         if (selectedRow != -1) {
+            PrintedEdition editionToRemove = library.getEditions().get(selectedRow); // Получаем издание, которое нужно удалить
+
+            // Удаляем издание из базы данных
+            libraryDB.removeEdition(editionToRemove);
+
+            // Удаляем издание из локального списка
             library.removeEdition(selectedRow);
+
+            // Обновляем таблицу в представлении
             view.updateTable(library);
         } else {
             JOptionPane.showMessageDialog(null, "Выберите запись для удаления!", "Ошибка", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+
+
+    // Метод для поиска издания по ключевому слову
     private void searchEdition() {
-        String keyword = JOptionPane.showInputDialog("Введите ключевое слово для поиска:"); // Запрашиваем ключевое слово
-        if (keyword != null && !keyword.isEmpty()) { // Проверяем, что пользователь ввел данные
-            Library searchResults = new Library(); // Создаем временный объект библиотеки для хранения результатов поиска
-            for (PrintedEdition edition : library.getEditions()) { // Проходим по всем книгам в библиотеке
-                // Проверяем, что название издания начинается с введенного ключевого слова (игнорируем регистр)
+        String keyword = JOptionPane.showInputDialog("Введите ключевое слово для поиска:");
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            Library searchResults = new Library(); // Временная библиотека для хранения результатов
+            for (PrintedEdition edition : libraryDB.getEditions()) { // Получаем издания из базы данных
                 if (edition.getTitle().toUpperCase().startsWith(keyword.toUpperCase())) {
-                    searchResults.addEdition(edition); // Добавляем найденные книги в новую библиотеку
+                    searchResults.addEdition(edition);
                 }
             }
-            // Если найдены результаты поиска
+
             if (!searchResults.getEditions().isEmpty()) {
-                view.updateTable(searchResults); // Обновляем таблицу в представлении, показывая результаты поиска
+                view.updateTable(searchResults); // Отображаем результаты поиска
             } else {
                 JOptionPane.showMessageDialog(null, "Издание не найдено.", "Поиск", JOptionPane.INFORMATION_MESSAGE);
             }
         }
     }
 
-
-
-
     // Метод для сортировки изданий по выбранному параметру
     private void sortEditions() {
-        // Массив с возможными параметрами сортировки (название, автор, год и т.д.)
         String[] options = {"Название", "Автор", "Год", "Издательство", "Жанр", "Тип"};
-
-        // Открытие диалогового окна с выбором параметра сортировки
         String choice = (String) JOptionPane.showInputDialog(
-                view.frame,  // Ссылка на главное окно из класса LibraryView
-                "Выберите параметр сортировки:", // Текст, который будет отображаться в диалоговом окне
-                "Сортировка", // Заголовок окна
-                JOptionPane.QUESTION_MESSAGE, // Тип диалогового окна (вопрос)
-                null,  // Значок (пока не используется, можно передать иконку)
-                options, // Массив опций для выбора
-                options[0]  // Значение по умолчанию (первый элемент в массиве)
+                view.frame,
+                "Выберите параметр сортировки:",
+                "Сортировка",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
         );
 
-        // Если пользователь выбрал параметр сортировки (не отменил выбор)
         if (choice != null) {
-            // В зависимости от выбора пользователя, вызываем соответствующий метод сортировки
             switch (choice) {
                 case "Название":
-                    library.sortByTitle();  // Сортируем по названию
+                    library.sortByTitle(); // Используем уже существующий метод
                     break;
                 case "Автор":
-                    library.sortByAuthor();  // Сортируем по автору
+                    library.sortByAuthor(); // Используем уже существующий метод
                     break;
                 case "Год":
-                    library.sortByYear();  // Сортируем по году
+                    library.sortByYear(); // Используем уже существующий метод
                     break;
                 case "Издательство":
-                    library.sortByPublisher();  // Сортируем по издательству
+                    library.sortByPublisher(); // Используем уже существующий метод
                     break;
                 case "Жанр":
-                    library.sortByGenre();  // Сортируем по жанру
+                    library.sortByGenre(); // Используем уже существующий метод
                     break;
                 case "Тип":
-                    library.sortByType();  // Сортируем по типу (книга, учебник, журнал)
+                    library.sortByType(); // Используем уже существующий метод
                     break;
             }
-            // Обновляем таблицу в представлении, чтобы отобразить отсортированные данные
-            view.updateTable(library);  // Метод обновления таблицы с данными из библиотеки
+            library.setEditions(library.getEditions()); // Обновляем список изданий в библиотеке
+            view.updateTable(library); // Обновляем таблицу после сортировки
         }
-    }
 
+    }
 }

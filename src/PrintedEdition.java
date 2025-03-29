@@ -20,4 +20,6 @@ public abstract class PrintedEdition {
     public String getGenre() { return genre; }  // Геттер для жанра
 
     public abstract String getType(); // Возвращает "Книга", "Журнал" или "Учебник"
+
+
 }
