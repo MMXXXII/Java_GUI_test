@@ -1,4 +1,10 @@
 import javax.swing.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LibraryController {
     private Library library;
@@ -19,9 +25,10 @@ public class LibraryController {
         view.setRemoveButtonListener(e -> removeEdition());
         view.setSearchButtonListener(e -> searchEdition());
         view.setSortButtonListener(e -> sortEditions());
+        view.setEditButtonListener(e -> editEdition());
+
     }
 
-    // Метод для добавления нового издания в библиотеку
     private void addEdition() {
         String selectedType = view.getSelectedType(); // Получаем выбранный тип
 
@@ -54,8 +61,11 @@ public class LibraryController {
         String genre = requestInput("Введите жанр:");
         if (genre == null || genre.trim().isEmpty()) return;
 
+        // Получаем новый ID, предположим, что это автоинкремент или генерируется как-то
+        int newId = libraryDB.generateNewId(); // Пример генерации ID
+
         // Создаем объект нужного типа в зависимости от выбора пользователя
-        PrintedEdition edition = createEdition(selectedType, title, author, year, publisher, genre);
+        PrintedEdition edition = createEdition(newId, selectedType, title, author, year, publisher, genre);
         if (edition != null) {
             libraryDB.addEdition(edition); // Добавляем издание в базу данных через LibraryDB
             library.setEditions(libraryDB.getEditions()); // Обновляем список изданий в библиотеке
@@ -63,28 +73,75 @@ public class LibraryController {
         }
     }
 
-    // Метод для запроса ввода и повторного запроса при пустом значении
-    private String requestInput(String message) {
-        String input;
+    private void editEdition() {
+        int selectedRow = view.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(null, "Выберите запись для изменения!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        PrintedEdition oldEdition = library.getEditions().get(selectedRow);
+        int editionId = oldEdition.getId(); // Сохраняем ID
+
+        // Запрос новых данных
+        String newTitle = requestInput("Введите новое название:", oldEdition.getTitle());
+        if (newTitle == null) return;
+
+        String newAuthor = requestInput("Введите нового автора:", oldEdition.getAuthor());
+        if (newAuthor == null) return;
+
+        int newYear;
         while (true) {
-            input = JOptionPane.showInputDialog(message);
-            if (input == null || input.trim().isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Это поле не может быть пустым.", "Ошибка", JOptionPane.ERROR_MESSAGE);
-            } else {
-                return input;
+            try {
+                String yearInput = JOptionPane.showInputDialog("Введите новый год издания:", oldEdition.getYear());
+                if (yearInput == null) return;
+                newYear = Integer.parseInt(yearInput);
+                if (newYear > 2024) {
+                    JOptionPane.showMessageDialog(null, "Год издания не может быть больше 2024!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                    continue;
+                }
+                break;
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Введите корректный год!", "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
+        }
+
+        String newPublisher = requestInput("Введите новое издательство:", oldEdition.getPublisher());
+        if (newPublisher == null) return;
+
+        String newGenre = requestInput("Введите новый жанр:", oldEdition.getGenre());
+        if (newGenre == null) return;
+
+        // Создаем новый объект и устанавливаем старый ID
+        PrintedEdition newEdition = createEdition(editionId, oldEdition.getType(), newTitle, newAuthor, newYear, newPublisher, newGenre);
+        if (newEdition != null) {
+            libraryDB.updateEdition(oldEdition, newEdition); // Обновляем в базе данных
+            library.setEditions(libraryDB.getEditions()); // Обновляем библиотеку
+            view.updateTable(library); // Обновляем UI
         }
     }
 
+
+
+    private String requestInput(String message) {
+        return requestInput(message, "");
+    }
+
+    private String requestInput(String message, String defaultValue) {
+        String input = JOptionPane.showInputDialog(null, message, defaultValue);
+        return (input != null && !input.trim().isEmpty()) ? input : null;
+    }
+
+
     // Метод для создания объекта нужного типа
-    private PrintedEdition createEdition(String type, String title, String author, int year, String publisher, String genre) {
+    private PrintedEdition createEdition(int id, String type, String title, String author, int year, String publisher, String genre) {
         switch (type) {
             case "Книга":
-                return new Book(title, author, year, publisher, genre);
+                return new Book(id, title, author, year, publisher, genre);
             case "Учебник":
-                return new Textbook(title, author, year, publisher, genre);
+                return new Textbook(id, title, author, year, publisher, genre);
             case "Журнал":
-                return new Magazine(title, author, year, publisher, genre);
+                return new Magazine(id, title, author, year, publisher, genre);
             default:
                 JOptionPane.showMessageDialog(null, "Неизвестный тип издания!", "Ошибка", JOptionPane.ERROR_MESSAGE);
                 return null;
@@ -111,24 +168,49 @@ public class LibraryController {
 
 
 
-    // Метод для поиска издания по ключевому слову
-    private void searchEdition() {
-        String keyword = JOptionPane.showInputDialog("Введите ключевое слово для поиска:");
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            Library searchResults = new Library(); // Временная библиотека для хранения результатов
-            for (PrintedEdition edition : libraryDB.getEditions()) { // Получаем издания из базы данных
-                if (edition.getTitle().toUpperCase().startsWith(keyword.toUpperCase())) {
-                    searchResults.addEdition(edition);
+    public List<PrintedEdition> searchEdition() {
+        List<PrintedEdition> editions = new ArrayList<>();
+
+        // Запрос ключевого слова у пользователя
+        String keyword = requestInput("Введите название для поиска:");
+        if (keyword == null || keyword.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Введите корректное название!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            return editions;
+        }
+
+        String sql = "SELECT * FROM editions WHERE title LIKE ?";
+
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            // Здесь мы используем '%' в начале и в конце для поиска всех изданий, которые содержат введенную строку в любой части
+            stmt.setString(1, keyword + "%"); // Заменим на поиск по началу строки
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String title = rs.getString("title");
+                String author = rs.getString("author");
+                int year = rs.getInt("year");
+                String publisher = rs.getString("publisher");
+                String genre = rs.getString("genre");
+                String type = rs.getString("type");
+
+                PrintedEdition edition = createEdition(id, type, title, author, year, publisher, genre);
+                if (edition != null) {
+                    editions.add(edition);
                 }
             }
-
-            if (!searchResults.getEditions().isEmpty()) {
-                view.updateTable(searchResults); // Отображаем результаты поиска
-            } else {
-                JOptionPane.showMessageDialog(null, "Издание не найдено.", "Поиск", JOptionPane.INFORMATION_MESSAGE);
-            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Ошибка при поиске изданий в базе данных: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
+
+        return editions;
     }
+
+
+
 
     // Метод для сортировки изданий по выбранному параметру
     private void sortEditions() {

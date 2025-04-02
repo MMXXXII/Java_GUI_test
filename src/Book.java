@@ -1,6 +1,6 @@
 public class Book extends PrintedEdition {
-    public Book(String title, String author, int year, String publisher, String genre) {
-        super(title, author, year, publisher, genre);  // Передаем жанр в родительский класс
+    public Book(int id, String title, String author, int year, String publisher, String genre) {
+        super(id, title, author, year, publisher, genre);
     }
 
     @Override

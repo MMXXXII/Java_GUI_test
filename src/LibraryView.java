@@ -7,7 +7,7 @@ public class LibraryView {
     JFrame frame;
     private JTable table;
     private LibraryTableModel tableModel;
-    private JButton addButton, removeButton, searchButton, sortButton;
+    private JButton addButton, removeButton, searchButton, sortButton, editButton;
     private JComboBox<String> typeComboBox; // Добавим JComboBox для выбора типа
 
     public LibraryView(Library library) {
@@ -25,6 +25,7 @@ public class LibraryView {
         removeButton = new JButton("Удалить");
         searchButton = new JButton("Поиск");
         sortButton = new JButton("Сортировка");
+        editButton = new JButton("Изменить");
 
         // Создаем JComboBox для выбора типа
         String[] types = {"Книга", "Учебник", "Журнал"};
@@ -35,6 +36,7 @@ public class LibraryView {
         panel.add(removeButton);
         panel.add(searchButton);
         panel.add(sortButton);
+        panel.add(editButton);
         frame.add(panel, BorderLayout.SOUTH);
 
         frame.setVisible(true);
@@ -52,6 +54,11 @@ public class LibraryView {
     public void setSearchButtonListener(ActionListener listener) {
         searchButton.addActionListener(listener);
     }
+
+    public void setEditButtonListener(ActionListener listener) {
+        editButton.addActionListener(listener);
+    }
+
 
     public void setSortButtonListener(ActionListener listener) {
         sortButton.addActionListener(listener);
