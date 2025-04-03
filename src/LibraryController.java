@@ -26,7 +26,13 @@ public class LibraryController {
         view.setSearchButtonListener(e -> searchEdition());
         view.setSortButtonListener(e -> sortEditions());
         view.setEditButtonListener(e -> editEdition());
+        view.setUpdateButtonListener(e -> updateTable());
 
+    }
+
+    private void updateTable() {
+        library.setEditions(libraryDB.getEditions()); // Обновляем данные из БД
+        view.updateTable(library); // Обновляем отображение таблицы
     }
 
     private void addEdition() {
@@ -205,6 +211,9 @@ public class LibraryController {
             JOptionPane.showMessageDialog(null, "Ошибка при поиске изданий в базе данных: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
+        library.setEditions(editions);
+        view.updateTable(library);
+
 
         return editions;
     }
