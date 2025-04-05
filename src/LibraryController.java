@@ -1,4 +1,6 @@
 import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,15 +22,55 @@ public class LibraryController {
         library.setEditions(libraryDB.getEditions()); // Загружаем все издания из базы данных
         view.updateTable(library); // Обновляем таблицу на UI
 
-        // Назначение обработчиков событий с использованием лямбда-выражений
-        view.setAddButtonListener(e -> addEdition());
-        view.setRemoveButtonListener(e -> removeEdition());
-        view.setSearchButtonListener(e -> searchEdition());
-        view.setSortButtonListener(e -> sortEditions());
-        view.setEditButtonListener(e -> editEdition());
-        view.setUpdateButtonListener(e -> updateTable());
+        // Обработчик кнопки "Добавить"
+        view.setAddButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                addEdition();
+            }
+        });
 
+        // Обработчик кнопки "Удалить"
+        view.setRemoveButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                removeEdition();
+            }
+        });
+
+        // Обработчик кнопки "Поиск"
+        view.setSearchButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                searchEdition();
+            }
+        });
+
+        // Обработчик кнопки "Сортировка"
+        view.setSortButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                sortEditions();
+            }
+        });
+
+        // Обработчик кнопки "Изменить"
+        view.setEditButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                editEdition();
+            }
+        });
+
+        // Обработчик кнопки "Обновить"
+        view.setUpdateButtonListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                updateTable();
+            }
+        });
     }
+
 
     private void updateTable() {
         library.setEditions(libraryDB.getEditions()); // Обновляем данные из БД
